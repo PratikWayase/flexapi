@@ -1,0 +1,175 @@
+//  stateless web service interaction with two web browsers on the server 
+
+const express = require("express");
+const { spawn, exec } = require("child_process");
+const path = require("path");
+const os = require("os");
+const { error } = require("console");
+const { url } = require("inspector");
+const { EOF } = require("dns");
+
+const app = express();
+const PORT = 5000;
+
+// Browser executable paths (update these based on your system)
+const CHROME_PATH = "/usr/bin/google-chrome";
+const FIREFOX_PATH = "/usr/bin/firefox";
+
+// Browser profile directories (for cleanup)
+const CHROME_PROFILE_DIR = path.join(os.homedir(), ".config/google-chrome");
+const FIREFOX_PROFILE_DIR = path.join(os.homedir(), ".mozilla/firefox");
+
+// Function to start a browser
+function startBrowser(browser, url) {
+    return new Promise((resolve, reject) => {
+        let command;
+        if (browser === "chrome") {
+            command = spawn(CHROME_PATH, [url]);
+        } else if (browser === "firefox") {
+            command = spawn(FIREFOX_PATH, ["-new-tab", url]);
+        } else {
+            reject(new Error("Unsupported browser"));
+            return;
+        }
+
+        command.on("error", (err) => {
+            reject(err);
+        });
+
+        command.on("close", (code) => {
+            if (code === 0) {
+                resolve(`${browser} started with URL: ${url}`);
+            } else {
+                reject(new Error(`${browser} failed to start`));
+            }
+        });
+    });
+}
+
+// Function to get the current URL of a browser
+function getBrowserUrl(browser) {
+    return new Promise((resolve, reject) => {
+        if (browser === "chrome") {
+            exec("xdotool search --name 'Google Chrome' getwindowname", (err, stdout, stderr) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(stdout.trim());
+                }
+            });
+        } else if (browser === "firefox") {
+            exec("xdotool search --name 'Mozilla Firefox' getwindowname", (err, stdout, stderr) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(stdout.trim());
+                }
+            });
+        } else {
+            reject(new Error("Unsupported browser"));
+        }
+    });
+}
+
+// Function to stop a browser
+function stopBrowser(browser) {
+    return new Promise((resolve, reject) => {
+        let command;
+        if (browser === "chrome") {
+            command = "pkill chrome";
+        } else if (browser === "firefox") {
+            command = "pkill firefox";
+        } else {
+            reject(new Error("Unsupported browser"));
+            return;
+        }
+
+        exec(command, (err, stdout, stderr) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(`${browser} stopped`);
+            }
+        });
+    });
+}
+
+// Function to clean up a browser's session
+function cleanupBrowser(browser) {
+    return new Promise((resolve, reject) => {
+        let profileDir;
+        if (browser === "chrome") {
+            profileDir = CHROME_PROFILE_DIR;
+        } else if (browser === "firefox") {
+            profileDir = FIREFOX_PROFILE_DIR;
+        } else {
+            reject(new Error("Unsupported browser"));
+            return;
+        }
+
+        exec(`rm -rf ${profileDir}`, (err, stdout, stderr) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(`${browser} session cleaned up`);
+            }
+        });
+    });
+}
+
+// endpoint to start borswer
+
+app.get("/start", (req, res) => {
+    const browser = req.query.browser
+    const url = req.query.url;
+
+    if (!browser || !url) {
+        return res.status(400).json({error:"missing beoswr or url paramneter"})
+    }
+    startBrowser(browser, url)
+        .then((message) => res.json({ message }))
+        .catch ((err) => res.status(500).json({error:err.message}))
+    
+})
+
+// get cucrnet url
+
+app.get("/geturl", (req, res) => {
+    const borswer = req.query.borswer;
+    if (!borswer) {
+        return res.status(400).json ({error:"mssing paramter"})
+    }
+    getBrowserUrl(borswer)
+        .then((url) => res.json({ url }))
+        .catch ((Err) => res.status(500).json({error:err.message}))
+})
+
+// stop borswer
+
+app.get("/stop", (req, res) => {
+    const borswer = req.query.borswer;
+    if (!borswer) {
+        return res.status(400).json ({error: "missing"})
+    }
+    stopBrowser(borswer).then((message) => res.json({ message }))
+        .catch((err)=>res.status(500).json({error:err.message}))
+})
+
+
+// Endpoint to clean up a browser's session
+app.get("/cleanup", (req, res) => {
+    const browser = req.query.browser;
+
+    if (!browser) {
+        return res.status(400).json({ error: "Missing browser parameter" });
+    }
+
+    cleanupBrowser(browser)
+        .then((message) => res.json({ message }))
+        .catch((err) => res.status(500).json({ error: err.message }));
+});
+
+// Start the server
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
