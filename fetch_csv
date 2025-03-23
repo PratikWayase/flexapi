@@ -1,0 +1,90 @@
+
+// fetch csv data & make api calls 
+
+// prerequi -> npm install express csv-parser
+
+const express = require("express")
+const csv = require("csv-parser")
+const fs = require("fs")
+const path = require("path")
+const { rejects } = require("assert")
+const { error } = require("console")
+
+const app = express()
+const port = 5000;
+
+const csv_file = path.join(__dirname, "restaurants.csv");
+
+// read & parse csv file 
+function readCSVFile() {
+    return new Promise((resolve, rejects) => {
+        if (!fs.existsSync(csv_file)) {
+            rejects(new Error("not found"))
+            return;
+        }
+
+        const result = [];
+        fs.createReadStream(csv_file)
+            .pipe(csv())
+            .on("data", (data) => result.push(data))
+            .on("end", () => {
+                if (result.length == 0) {
+                    rejects (new Error ("file is empty"))
+                } else {
+                    resolve (result)
+                }
+            })
+        .on ("error",(err) => rejects(err))
+    })
+}
+
+
+// fetch all restaruntas or flter by location / dish
+
+app.get("/restaurants", async (req, res) => {
+
+    try {
+        const { location, dish } = req.body;
+
+        if (location && typeof location !== "string") {
+            return res.status(400).json ({error:"invlaid lcoation paramter"})
+        }
+        if (dish && typeof dish !== "string") {
+            return res.status (400).json ({error:"invalid dish"})
+        }
+        //read  &pasr csv file 
+        const restaurants = await readCSVFile();
+        let filterdRestarunts = restaurants;
+
+        // filter by location  &dish 
+        if (location) {
+            filterdRestarunts = filterdRestarunts.filter(
+                (restaurants ) => restaurants.location.toLowerCase() == location.toLowerCase()
+            )
+        }
+
+        if (dish) {
+            filterdRestarunts = filterdRestarunts.filter(
+                restaurants.main_dishes.toLowerCase().includes(dish.toLowerCase())
+            )
+        }
+
+        // return filter results 
+        res.json (filterdRestarunts)
+    } catch (err) {
+        // hnadle errors 
+        if (err.message == "csv file not find") {
+            res.status(400).json ({error:"csv file not find"})
+        } else if (err.message == "csv file is eimty ") {
+            res.status (200).json([])
+        } else {
+            console.error(err)
+            res.status(500).json ({error:"interanal server error"})
+        }
+    }
+
+})
+
+app.listen(port, () => {
+    console.log (`server running :${port}`)
+})
