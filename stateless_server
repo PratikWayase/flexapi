@@ -19,6 +19,8 @@ const FIREFOX_PATH = "/usr/bin/firefox";
 const CHROME_PROFILE_DIR = path.join(os.homedir(), ".config/google-chrome");
 const FIREFOX_PROFILE_DIR = path.join(os.homedir(), ".mozilla/firefox");
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // Function to start a browser
 function startBrowser(browser, url) {
     return new Promise((resolve, reject) => {
@@ -46,6 +48,8 @@ function startBrowser(browser, url) {
     });
 }
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // Function to get the current URL of a browser
 function getBrowserUrl(browser) {
     return new Promise((resolve, reject) => {
@@ -71,6 +75,8 @@ function getBrowserUrl(browser) {
     });
 }
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // Function to stop a browser
 function stopBrowser(browser) {
     return new Promise((resolve, reject) => {
@@ -93,6 +99,8 @@ function stopBrowser(browser) {
         });
     });
 }
+
+///////////////////////////////////// ** /////////////////////////////////////
 
 // Function to clean up a browser's session
 function cleanupBrowser(browser) {
@@ -117,6 +125,8 @@ function cleanupBrowser(browser) {
     });
 }
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // endpoint to start borswer
 
 app.get("/start", (req, res) => {
@@ -132,6 +142,8 @@ app.get("/start", (req, res) => {
     
 })
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // get cucrnet url
 
 app.get("/geturl", (req, res) => {
@@ -144,6 +156,8 @@ app.get("/geturl", (req, res) => {
         .catch ((Err) => res.status(500).json({error:err.message}))
 })
 
+///////////////////////////////////// ** /////////////////////////////////////
+
 // stop borswer
 
 app.get("/stop", (req, res) => {
@@ -155,6 +169,7 @@ app.get("/stop", (req, res) => {
         .catch((err)=>res.status(500).json({error:err.message}))
 })
 
+///////////////////////////////////// ** /////////////////////////////////////
 
 // Endpoint to clean up a browser's session
 app.get("/cleanup", (req, res) => {
